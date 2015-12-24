@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 import time
 import pygame
 from mpd import MPDClient
 import menus
-
+from constants import *
 class Starplay:
 
     def mpdinit(self):
@@ -139,6 +138,3 @@ class Starplay:
 
                 if changed: self.rendermenu()
                 time.sleep(0.05)
-
-if __name__ == "__main__":
-    Starplay().main()

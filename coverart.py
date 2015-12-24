@@ -4,8 +4,7 @@ import io
 import os.path
 from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
-
-IMAGESIZE = 330
+from constants import *
 
 def getcoverart(file):
     try:

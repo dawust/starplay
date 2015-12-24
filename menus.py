@@ -4,17 +4,7 @@ import pygame.freetype
 import threading
 import os.path
 import coverart
-
-IMAGESIZE = 330
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-LIGHTTEXT = (250, 220, 160)
-GRAY = (50, 50, 50)
-LEFT = 60
-TOP = 30
-RIGHT = 980
-SPACER = 35
-LINEPOS = 40
+from constants import *
 
 class Entry:
     def __init__(self, name, filename=None):
