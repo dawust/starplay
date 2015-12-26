@@ -31,6 +31,7 @@ class Starplay:
         self.surface = pygame.display.set_mode(size)
 
     def addartists(self, selartist):
+        self.artistmenu.clear()
         artists = self.mpd.list("ARTIST")
         for artist in sorted(artists, key=lambda s: s.lower()):
             self.artistmenu.addentry(Entry(artist))
@@ -88,9 +89,8 @@ class Starplay:
         elif (self.playbackmode == 1):
             self.mpd.play(0)
         elif (self.playbackmode == 2):
-            if self.currentalbum is not None and self.currentartist is not None:
-                self.mpdaddalbum(self.currentartist, self.currentalbum.next)
-                self.mpd.play(0)
+            self.mpdaddalbum(self.currentartist, self.currentalbum.next)
+            self.mpd.play(0)
         self.updatempd()
 
     def setactivemenu(self, menu):
@@ -99,7 +99,7 @@ class Starplay:
         self.rendermenu()
 
     def selectartist(self, artist, update=True):
-        ret = None
+        ret = Entry("XXX")
         albums = self.mpd.list("ALBUM", "ARTIST", artist.name)
         self.albummenu.clear()
         self.albummenu.setname(artist.name)
@@ -107,7 +107,7 @@ class Starplay:
         first = None
         for album in sorted(albums, key=lambda s: s.lower()):
             entry = Entry(album)
-            if prev: 
+            if prev is not None: 
                 prev.next = entry
             else:
                 first = entry
@@ -168,8 +168,9 @@ class Starplay:
             self.currentalbum = self.selectartist(self.currentartist, False)
             
             state = self.currentstatus.get('state')
-            if state == 'stop': self.mpd.play(0)
-            if self.currentalbum is not None and self.currentartist is not None and (state == 'play' or state == 'pause'):
+            print(state)
+            #if state == 'stop': self.mpd.play(0)
+            if state == 'play' or state == 'pause':
                 self.mpd.pause(0)
                 self.setactivemenu(self.playback)
             else:
@@ -203,6 +204,8 @@ class Starplay:
                         timelast = time.time()     
 
                 if time.time() - timelast > 15 and self.currentstatus.get('state') == 'play' and self.activemenu != self.playback:
+                    self.addartists(self.currentartist.name)
+                    self.selectartist(self.currentartist, False)
                     self.setactivemenu(self.playback)
                     changed = True
 
