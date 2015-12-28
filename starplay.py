@@ -43,7 +43,7 @@ class Starplay:
     def createtrackmenu(self):
         self.trackmenu = menus.Menu(self.surface, self)
         self.trackmenu.setevententer(self.selecttrack)
-        self.trackmenu.seteventbackspace(lambda: self.selectartist(self.currentartist))
+        self.trackmenu.seteventbackspace(lambda: self.setactivemenu(self.albummenu))
 
     def createplayback(self):
         self.playback = menus.Playscreen(self.surface, self)
@@ -145,27 +145,29 @@ class Starplay:
             self.mpdaddalbum(self.currentartist, self.currentalbum.next)
             self.mpd.play(0)
 
-    def updatempd(self, update=False):
+    def updatempd(self):
         newstatus = self.mpd.status()
         changed = (newstatus.get('time') != self.currentstatus.get('time'))
         self.currentstatus = newstatus
 
         newsong = self.mpd.currentsong()
-        if (newsong != self.currentsong) or update:
+        if (newsong != self.currentsong):
             if (not newsong and self.currentsong): self.playbackfinished()
             self.currentsong = newsong
-            self.activemenu.changedsong()
             changed = True
 
         return changed
 
     def rendermenu(self):
-        self.updatempd(update=True)
+        if self.lastmenu != self.activemenu: self.activemenu.changedsong()
+        self.lastmenu = self.activemenu
         self.activemenu.render()
         pygame.display.update()
 
     def main(self):
             self.playbackmode = 2
+            self.activemenu = None
+            self.lastmenu = None
             self.currentartist = None
             self.currentalbum = None
             self.currentstatus = {}
@@ -179,7 +181,7 @@ class Starplay:
             self.createplayback()  
             self.setactivemenu(self.artistmenu)
 
-            self.updatempd(True)
+            self.updatempd()
             self.currentartist = Entry(self.currentsong.get('artist'))
             self.currentalbum = Entry(self.currentsong.get('album'))
             self.addartists()
