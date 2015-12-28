@@ -30,7 +30,7 @@ MUSICPATH = "/home/fritz/music/"
 COVERPATH = "/home/fritz/test/"
 
 pygame.freetype.init()
-FONT = pygame.freetype.Font(pygame.font.match_font('Hiragino Sans GB'), 42)
+FONT = pygame.freetype.Font(pygame.font.match_font('Hiragino Kaku Gothic Pro'), 42)
 FONT.origin = True
 
 IMAGESIZE = 330

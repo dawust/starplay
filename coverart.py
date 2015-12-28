@@ -35,11 +35,14 @@ def scale(image, size):
 def getcover(file, callback):
     filename = MUSICPATH + file
     filepath, tail = os.path.split(filename)
-    covername = COVERPATH + filepath + "/cover.png"
-    if not os.path.exists(covername):
+    covername = filepath + "/cover.png"
+    if os.path.exists(covername):
+        image = pygame.image.load(covername).convert()
+        if image is not None: callback(image)
+    elif not os.path.exists(COVERPATH + covername):
         threading.Thread(target=getcoverhelper, args=[filename, callback]).start()
     else:
-        image = pygame.image.load(covername).convert()
+        image = pygame.image.load(COVERPATH + covername).convert()
         if image is not None: callback(image)
 
 def getcoverhelper(filename, callback):

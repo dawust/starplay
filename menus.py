@@ -20,14 +20,20 @@ class Screen:
     def seteventbackspace(self, event):
         self.eventbackspace = event
 
-    def changedstatus(self, status): pass
-
-    def changedsong(self, song): pass
+    def changedsong(self): pass
 
     def drawtitle(self, title):
         self.surface.fill(BLACK)
         FONT.render_to(self.surface, (LEFT, TOP+16), title, WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
+        self.drawicons()
         pygame.draw.line(self.surface, GRAY, (LEFT, TOP + LINEPOS), (RIGHT, TOP + LINEPOS))
+
+    def drawicons(self):
+        self.surface.fill(BLACK, (RIGHT-25, TOP - 24, RIGHT, TOP + 24))
+        if (self.player.playbackmode == 1):
+            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u2192", WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
+        elif (self.player.playbackmode == 2):
+            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u21c6", WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
 
     def drawtextsplit(self, text, pos, fg, bg):
         maxwidth = RIGHT - pos[0]
@@ -67,31 +73,29 @@ class Screen:
             FONT.render_to(self.surface, pos, text[:maxlen] + "...", fg, bg)
 
 class Playscreen(Screen):
-    def __init__(self, surface):
+    def __init__(self, surface, player):
         self.surface = surface
+        self.player = player
     
-    def changedsong(self, song):
-        self.currentsong = song
+    def changedsong(self):
         try:
-            self.drawtitle("Now Playing")
-            coverart.getcover(self.currentsong['file'], self.drawcover)
+            self.drawtitle("Now Playing (%d/%d)" % (int(self.player.currentsong['pos'])+1, int(self.player.currentstatus['playlistlength'])))
+            coverart.getcover(self.player.currentsong['file'], self.drawcover)
 
             pos = (LEFT + IMAGESIZE + SPACER, TOP + LINEPOS + SPACER + 32)
-            pos = self.drawtextsplit(self.currentsong['title'], pos, LIGHTTEXT, BLACK)
-            pos = self.drawtextsplit(self.currentsong['artist'], pos, WHITE, BLACK)
-            self.drawtextsplit(self.currentsong['album'], pos, WHITE, BLACK)
+            pos = self.drawtextsplit(self.player.currentsong['title'], pos, LIGHTTEXT, BLACK)
+            pos = self.drawtextsplit(self.player.currentsong['artist'], pos, WHITE, BLACK)
+            self.drawtextsplit(self.player.currentsong['album'], pos, WHITE, BLACK)
         except:
             pass
-
-    def changedstatus(self, status):
-        self.currentstatus = status
 
     def drawcover(self, image):
         self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER))
 
     def render(self):
         try:
-            playtime = self.currentstatus['time'].split(':')
+            self.drawicons()
+            playtime = self.player.currentstatus['time'].split(':')
             timenow = int(playtime[0])
             timetotal = int(playtime[-1])
             timenowmin, timenowsec = divmod(timenow, 60)
@@ -111,9 +115,10 @@ class Playscreen(Screen):
             print("Playback Exception")
 
 class Menu(Screen):
-    def __init__(self, surface, name=""):
-        self.name = name
+    def __init__(self, surface, player, name=""):
         self.surface = surface
+        self.player = player
+        self.name = name
         self.clear()
 
     def clear(self):
