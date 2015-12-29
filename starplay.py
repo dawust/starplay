@@ -152,8 +152,12 @@ class Starplay:
 
         newsong = self.mpd.currentsong()
         if (newsong != self.currentsong):
-            if (not newsong and self.currentsong): self.playbackfinished()
+            if (not newsong and self.currentsong):
+                self.playbackfinished()
+                self.currentstatus = self.mpd.status()
+                newsong = self.mpd.currentsong()
             self.currentsong = newsong
+            self.activemenu.changedsong()
             changed = True
 
         return changed
