@@ -24,16 +24,16 @@ class Screen:
 
     def drawtitle(self, title):
         self.surface.fill(BLACK)
-        FONT.render_to(self.surface, (LEFT, TOP+16), title, WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
+        FONT.render_to(self.surface, (LEFT, TOP+16), title, WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 24)
         self.drawicons()
         pygame.draw.line(self.surface, GRAY, (LEFT, TOP + LINEPOS), (RIGHT, TOP + LINEPOS))
 
     def drawicons(self):
         self.surface.fill(BLACK, (RIGHT-25, TOP - 24, RIGHT, TOP + 24))
         if (self.player.playbackmode == 1):
-            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u2192", WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
+            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u2192", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 24)
         elif (self.player.playbackmode == 2):
-            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u21c6", WHITE, BLACK, pygame.freetype.STYLE_NORMAL, 0, 24)
+            FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u21c6", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 24)
 
     def drawtextsplit(self, text, pos, fg, bg):
         maxwidth = RIGHT - pos[0]
@@ -60,16 +60,18 @@ class Screen:
         pos = (pos[0], pos[1] + 60)
         return pos
 
-    def drawtextshort(self, text, pos, fg, bg):
-        maxlen = 0
-        maxwidth = RIGHT - pos[0]
-        textlen = len(text) 
-        for maxlen in range(textlen, 0, -1):
-            rect = FONT.get_rect(text[:maxlen])
-            if rect.width < maxwidth: break
-        if maxlen == textlen:
-            FONT.render_to(self.surface, pos, text[:maxlen], fg, bg)
+    def drawtextshort(self, text, pos, fg, bg, offset=0):
+        maxwidth = RIGHT - pos[0] - offset
+
+        rect = FONT.get_rect(text)
+        if rect.width < maxwidth: 
+            FONT.render_to(self.surface, pos, text, fg, bg)
         else:
+            maxlen = 0
+            textlen = len(text) 
+            for maxlen in range(textlen, 0, -1):
+                rect = FONT.get_rect(text[:maxlen] + "...")
+                if rect.width < maxwidth: break
             FONT.render_to(self.surface, pos, text[:maxlen] + "...", fg, bg)
 
 class Playscreen(Screen):
@@ -80,12 +82,13 @@ class Playscreen(Screen):
     def changedsong(self):
         try:
             self.drawtitle("Now Playing (%d/%d)" % (int(self.player.currentsong['pos'])+1, int(self.player.currentstatus['playlistlength'])))
-            coverart.getcover(self.player.currentsong['file'], self.drawcover)
 
             pos = (LEFT + IMAGESIZE + SPACER, TOP + LINEPOS + SPACER + 32)
             pos = self.drawtextsplit(self.player.currentsong['title'], pos, LIGHTTEXT, BLACK)
             pos = self.drawtextsplit(self.player.currentsong['artist'], pos, WHITE, BLACK)
             self.drawtextsplit(self.player.currentsong['album'], pos, WHITE, BLACK)
+            
+            coverart.getcover(self.player.currentsong['file'], self.drawcover)
         except:
             pass
 
@@ -167,9 +170,9 @@ class Menu(Screen):
         if sel:                
             for j in range(0, 60):
                 pygame.draw.line(self.surface, SELECTBAR[j], (pos[0], pos[1]-15+j), (RIGHT-32, pos[1]-15+j))
-            FONT.render_to(self.surface, (pos[0]+10, pos[1]+32), text, LIGHTTEXT)
+            self.drawtextshort(text, (pos[0]+10, pos[1]+32), LIGHTTEXT, None, 32)
         else:
-            FONT.render_to(self.surface, (pos[0]+10, pos[1]+32), text, WHITE, BLACK)
+            self.drawtextshort(text, (pos[0]+10, pos[1]+32), WHITE, BLACK, 32)
         pos = (pos[0], pos[1] + 60)
         return pos
 

@@ -3,6 +3,7 @@ import pygame
 from mpd import MPDClient
 import menus
 from constants import *
+import slirc
 
 class Entry:
     def __init__(self, name, filename=None):
@@ -29,6 +30,7 @@ class Starplay:
         size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
         size = (1024,576)
         self.surface = pygame.display.set_mode(size)
+        pygame.mouse.set_visible(False)
 
     def createartistmenu(self):
         self.artistmenu = menus.Menu(self.surface, self, "Artists")
@@ -48,7 +50,10 @@ class Starplay:
     def createplayback(self):
         self.playback = menus.Playscreen(self.surface, self)
         self.playback.setevententer(self.mpd.pause)
-        self.playback.seteventbackspace(lambda: self.selectalbum(self.currentartist, self.currentalbum))
+        def selectalbumcurrent():
+            self.selectartist(self.currentartist)
+            self.selectalbum(self.currentartist, self.currentalbum)
+        self.playback.seteventbackspace(selectalbumcurrent)
 
     def setactivemenu(self, menu):
         self.activemenu = menu
@@ -179,6 +184,8 @@ class Starplay:
             self.pygameinit() 
             self.mpdinit()
 
+            #socklirc = slirc.connect()
+
             self.createartistmenu()
             self.createalbummenu()
             self.createtrackmenu()
@@ -203,6 +210,37 @@ class Starplay:
             running = True
             timelast = time.time()
             while running:
+                for key in []: #slirc.nextcodes(socklirc):
+                    if key == "BTN_PREV":
+                            self.prevtrackalbum()
+                    if key == "BTN_NEXT":
+                            self.nexttrackalbum()
+                    if key == "BTN_4":
+                            self.prevtrackalbum()
+                    if key == "BTN_6":
+                            self.nexttrackalbum()
+
+                    if key == "BTN_1":
+                            self.mpd.update()
+                            self.addartists()
+                            self.setactivemenu(self.artistmenu)
+
+                    if key == "BTN_3":
+                            self.togglemode()
+
+                    if key == "BTN_0":
+                            self.activemenu.keybackspace()
+                    if key == "BTN_5":
+                            self.activemenu.keyenter()
+
+                    if key == "BTN_2":
+                            self.activemenu.keyup()
+                    if key == "BTN_8":
+                            self.activemenu.keydown()
+
+                    changed = True
+                    timelast = time.time()     
+
                 for event in pygame.event.get():
                     if (event.type == pygame.QUIT):
                         return

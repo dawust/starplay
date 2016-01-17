@@ -4,9 +4,9 @@ class BarFactory:
     def create_selectbar():
         bar = []
         for i in range(0, 30):
-            bar.append((i*2, i*2, i*2))
+            bar.append((16+i*2, 16+i*2, 16+i*2))
         for i in range(0, 30):
-            bar.append((60-i*2, 60-i*2, 60-i*2))
+            bar.append((76-i*2, 76-i*2, 76-i*2))
         return bar
 
     @staticmethod
@@ -35,12 +35,12 @@ FONT.origin = True
 
 IMAGESIZE = 330
 WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+BLACK = (16, 16, 16)
 LIGHTTEXT = (250, 220, 160)
 GRAY = (50, 50, 50)
-LEFT = 60
+LEFT = 16
 TOP = 30
-RIGHT = 980
+RIGHT = 985
 SPACER = 35
 LINEPOS = 40
 
