@@ -2,6 +2,7 @@ import socket
 import os, fcntl
 
 def connect():
+	return
 	while True:
 		try:
 			socket_path =  "/var/run/lirc/lircd"

@@ -35,7 +35,7 @@ FONT.origin = True
 
 IMAGESIZE = 330
 WHITE = (255, 255, 255)
-BLACK = (16, 16, 16)
+BLACK = (32, 32, 32)
 LIGHTTEXT = (250, 220, 160)
 GRAY = (50, 50, 50)
 LEFT = 16

@@ -60,14 +60,14 @@ class Starplay:
 
     def addartists(self):
         self.artistmenu.clear()
-        artists = self.mpd.list("ARTIST")
+        artists = self.mpd.list("ALBUMARTIST")
         for artist in sorted(artists, key=lambda s: s.lower()):
             self.artistmenu.addentry(Entry(artist))
             if self.currentartist.name == artist: self.artistmenu.setpos()
 
     def selectartist(self, artist):
         ret = Entry("XXX")
-        albums = self.mpd.list("ALBUM", "ARTIST", artist.name)
+        albums = self.mpd.list("ALBUM", "ALBUMARTIST", artist.name)
         self.albummenu.clear()
         self.albummenu.setname(artist.name)
         prev = None
@@ -92,7 +92,7 @@ class Starplay:
         return ret
 
     def selectalbum(self, artist, album):
-        tracks = self.mpd.find("ARTIST", artist.name, "ALBUM", album.name)
+        tracks = self.mpd.find("ALBUMARTIST", artist.name, "ALBUM", album.name)
         self.trackmenu.clear()
         self.trackmenu.setname(album.name)
         for track in tracks:
@@ -114,7 +114,7 @@ class Starplay:
         self.currentartist = artist
         self.currentalbum = album
         self.mpd.clear()
-        songs = self.mpd.find("ARTIST", artist.name, "ALBUM", album.name)
+        songs = self.mpd.find("ALBUMARTIST", artist.name, "ALBUM", album.name)
         for song in songs:
             self.mpd.add(song.get('file'))
 
@@ -184,7 +184,7 @@ class Starplay:
             self.pygameinit() 
             self.mpdinit()
 
-            #socklirc = slirc.connect()
+            socklirc = slirc.connect()
 
             self.createartistmenu()
             self.createalbummenu()
@@ -210,7 +210,7 @@ class Starplay:
             running = True
             timelast = time.time()
             while running:
-                for key in []: #slirc.nextcodes(socklirc):
+                for key in slirc.nextcodes(socklirc):
                     if key == "BTN_PREV":
                             self.prevtrackalbum()
                     if key == "BTN_NEXT":
@@ -237,6 +237,12 @@ class Starplay:
                             self.activemenu.keyup()
                     if key == "BTN_8":
                             self.activemenu.keydown()
+                
+                    if key == "BTN_7":
+                            self.activemenu.keypgdn()
+                    if key == "BTN_9":
+                            self.activemenu.keypgup()
+
 
                     changed = True
                     timelast = time.time()     
@@ -260,6 +266,10 @@ class Starplay:
                             self.activemenu.keyenter()
                         elif (event.key == pygame.K_BACKSPACE):
                             self.activemenu.keybackspace()
+                        elif (event.key == pygame.K_PAGEDOWN):
+                            self.activemenu.keypgdn()
+                        elif (event.key == pygame.K_PAGEUP):
+                            self.activemenu.keypgup()
                         elif (event.key == pygame.K_m):
                             self.togglemode()
                         elif (event.key == pygame.K_u):
@@ -276,7 +286,7 @@ class Starplay:
                     self.setactivemenu(self.playback)
                     changed = True
 
+                changed |= self.updatempd()
                 if changed: self.rendermenu()
                 time.sleep(0.05)
                 
-                changed = self.updatempd()

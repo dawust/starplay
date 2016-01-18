@@ -8,6 +8,10 @@ class Screen:
     
     def keyup(self): pass
 
+    def keypgdn(self): pass
+
+    def keypgup(self): pass
+
     def keyenter(self): 
         self.evententer()
 
@@ -94,6 +98,18 @@ class Playscreen(Screen):
 
     def drawcover(self, image):
         self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER))
+        
+        x = image.get_width()
+        y = image.get_height()
+        image.set_alpha(192)
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER-1), (0,0,x,1) )
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER + y), (0,y-1, x,y) )
+        image.set_alpha(128)
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER-2), (0,0,x,1) )
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER + y + 1), (0,y-1, x,y) )
+        image.set_alpha(64)
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER-3), (0,0,x,1) )
+        self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER + y + 2), (0,y-1, x,y) )
 
     def render(self):
         try:
@@ -114,8 +130,9 @@ class Playscreen(Screen):
             FONT.render_to(self.surface, (LEFT, barpos + SPACER + 32), "%02d:%02d" % (timenowmin, timenowsec), WHITE, BLACK)
             FONT.render_to(self.surface, (RIGHT - 120, barpos + SPACER + 32), "%02d:%02d" % (timetotalmin, timetotalsec), WHITE, BLACK)
 
-        except:
+        except Exception as e:
             print("Playback Exception")
+            print(self.player.currentstatus)
 
 class Menu(Screen):
     def __init__(self, surface, player, name=""):
@@ -135,6 +152,14 @@ class Menu(Screen):
 
     def getname(self):
         return self.name
+
+    def keypgup(self):
+        for i in range(6):
+            self.keyup()
+
+    def keypgdn(self):
+        for i in range(6):
+            self.keydown()
 
     def keyup(self):
         if self.sel > 0:
