@@ -89,12 +89,12 @@ class Playscreen(Screen):
 
             pos = (LEFT + IMAGESIZE + SPACER, TOP + LINEPOS + SPACER + 32)
             pos = self.drawtextsplit(self.player.currentsong['title'], pos, LIGHTTEXT, BLACK)
-            pos = self.drawtextsplit(self.player.currentsong['artist'], pos, WHITE, BLACK)
+            pos = self.drawtextsplit(self.player.currentsong.get('artist') or self.player.currentsong.get('albumartist'), pos, WHITE, BLACK)
             self.drawtextsplit(self.player.currentsong['album'], pos, WHITE, BLACK)
             
             coverart.getcover(self.player.currentsong['file'], self.drawcover)
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
     def drawcover(self, image):
         self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER))

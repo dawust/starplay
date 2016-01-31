@@ -25,7 +25,7 @@ class Starplay:
                 pass
     
     def pygameinit(self):
-        pygame.init()
+        pygame.display.init()
         pygame.display.set_caption("splay")
         size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
         size = (1024,576)
@@ -193,7 +193,7 @@ class Starplay:
             self.setactivemenu(self.artistmenu)
 
             self.updatempd()
-            self.currentartist = Entry(self.currentsong.get('artist'))
+            self.currentartist = Entry(self.currentsong.get('albumartist') or self.currentsong.get('artist'))
             self.currentalbum = Entry(self.currentsong.get('album'))
             self.addartists()
             self.currentalbum = self.selectartist(self.currentartist)
@@ -225,7 +225,7 @@ class Starplay:
                             self.addartists()
                             self.setactivemenu(self.artistmenu)
 
-                    if key == "BTN_3":
+                    if key == "BTN_7":
                             self.togglemode()
 
                     if key == "BTN_0":
@@ -238,9 +238,9 @@ class Starplay:
                     if key == "BTN_8":
                             self.activemenu.keydown()
                 
-                    if key == "BTN_7":
-                            self.activemenu.keypgdn()
                     if key == "BTN_9":
+                            self.activemenu.keypgdn()
+                    if key == "BTN_3":
                             self.activemenu.keypgup()
 
 

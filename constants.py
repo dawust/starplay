@@ -22,10 +22,10 @@ class BarFactory:
     def create_pbaractive():
         bar = []
         for i in range(0, 16):
-            bar.append((250-i*2, 220-i*2, 160-i*2))
+            bar.append((250-i*2, 200-i*2, 140-i*2))
         return bar
 
-MPDIP = "10.1.1.3"
+MPDIP = "localhost"
 MUSICPATH = "/home/fritz/music/"
 COVERPATH = "/home/fritz/test/"
 
@@ -36,7 +36,7 @@ FONT.origin = True
 IMAGESIZE = 330
 WHITE = (255, 255, 255)
 BLACK = (32, 32, 32)
-LIGHTTEXT = (250, 220, 160)
+LIGHTTEXT = (250, 200, 140)
 GRAY = (50, 50, 50)
 LEFT = 16
 TOP = 30

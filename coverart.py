@@ -16,13 +16,19 @@ def getembeddedcover(file):
             data = flac.pictures[0].data
         elif fileext.lower() == '.mp3':
             mp3 = MP3(file)
-            data = mp3.tags['APIC:'].data
+            apic = mp3.tags.get('APIC:', None)
+            if apic is None:
+                for key in mp3.tags:
+                    if key.startswith("APIC:"):
+                        apic = mp3.tags.get(key)
+                        break
+            data = apic.data
         
         image = scale(pygame.image.load(io.BytesIO(data)), IMAGESIZE)
         os.makedirs(COVERPATH + filepath, exist_ok=True)
         pygame.image.save(image, COVERPATH + filepath + "/cover.png")
         return image
-    except:
+    except Exception as e:
         pass
 
 def scale(image, size):
