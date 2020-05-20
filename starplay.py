@@ -4,6 +4,7 @@ from mpd import MPDClient
 import menus
 from constants import *
 import slirc
+import random
 
 class Entry:
     def __init__(self, name, filename=None):
@@ -11,6 +12,14 @@ class Entry:
         self.filename = filename
         self.next = None
         self.prev = None
+        self.marker = None
+
+class Song:
+    def __init__(self, artist, album, track, index):
+        self.artist = artist
+        self.album = album
+        self.track = track
+        self.index = index
 
 class Starplay:
     def mpdinit(self):
@@ -35,7 +44,7 @@ class Starplay:
     def createartistmenu(self):
         self.artistmenu = menus.Menu(self.surface, self, "Artists")
         self.artistmenu.setevententer(lambda: self.selectartist(self.artistmenu.getentry()))
-        self.artistmenu.seteventbackspace(lambda: None)
+        self.artistmenu.seteventbackspace(self.leaveplayer)
 
     def createalbummenu(self):
         self.albummenu = menus.Menu(self.surface, self)
@@ -46,6 +55,7 @@ class Starplay:
         self.trackmenu = menus.Menu(self.surface, self)
         self.trackmenu.setevententer(self.selecttrack)
         self.trackmenu.seteventbackspace(lambda: self.setactivemenu(self.albummenu))
+        self.trackmenu.seteventcontrol(self.makereservation)
 
     def createplayback(self):
         self.playback = menus.Playscreen(self.surface, self)
@@ -54,18 +64,34 @@ class Starplay:
             self.selectartist(self.currentartist)
             self.selectalbum(self.currentartist, self.currentalbum)
         self.playback.seteventbackspace(selectalbumcurrent)
+        self.playback.seteventcontrol(self.makereservation)
+        
+    def createrandomplayback(self):
+        self.randomplayback = menus.Playscreen(self.surface, self)
+        self.randomplayback.setevententer(self.mpd.pause)
+        self.randomplayback.seteventbackspace(lambda: self.setactivemenu(self.artistmenu))
 
+    def leaveplayer(self):
+        self.locked = 1
+        slirc.sendenter(self.sockserial)
+        
     def setactivemenu(self, menu):
         self.activemenu = menu
 
     def addartists(self):
         self.artistmenu.clear()
+        self.artistmenu.addentry(self.randomentry)
+        self.artistmenu.setpos()
         artists = self.mpd.list("ALBUMARTIST")
         for artist in sorted(artists, key=lambda s: s.lower()):
             self.artistmenu.addentry(Entry(artist))
-            if self.currentartist.name == artist: self.artistmenu.setpos()
-
+            if self.currentartist.name == artist and self.playbackmode != 1: self.artistmenu.setpos()
+    
     def selectartist(self, artist):
+        if artist == self.randomentry:
+            self.selectrandomplayback()
+            return self.randomentry
+    
         ret = Entry("XXX")
         albums = self.mpd.list("ALBUM", "ALBUMARTIST", artist.name)
         self.albummenu.clear()
@@ -100,34 +126,63 @@ class Starplay:
             self.trackmenu.addentry(entry)
             if self.currentsong.get('file') == track.get('file'):
                 self.trackmenu.setpos()
-
+        
+        self.settrackmarker()
         self.setactivemenu(self.trackmenu)
 
     def selecttrack(self):
-        if self.currentsong.get('file') != self.trackmenu.getentry().filename:
-            self.mpdaddalbum(self.artistmenu.getentry(), self.albummenu.getentry())
-            self.mpd.play(self.trackmenu.getpos())
+        if self.playbackmode != 0 or (self.currentsong.get('file') != self.trackmenu.getentry().filename):
+            self.playtrack(Song(self.artistmenu.getentry(), self.albummenu.getentry(), self.trackmenu.getentry(), self.trackmenu.getpos()))
         self.mpd.pause(0)
         self.setactivemenu(self.playback)
+ 
+    def playtrack(self, track):
+        self.playbackmode = 0
+        self.mpd.random(0)
+        self.cancelreservation()
+        self.mpdaddalbum(track.artist, track.album)
+        self.addartists()
+        self.mpd.play(track.index)
+       
+    def selectrandomplayback(self):
+        if self.playbackmode != 1:
+            self.playbackmode = 1
+            self.mpd.random(1)
+            self.cancelreservation()
+            self.mpd.clear()
+            self.mpd.findadd('base', 'sorted')
+            self.mpd.play(0)
+            self.mpd.next()
+        self.mpd.pause(0)
+        self.setactivemenu(self.randomplayback)
 
+    def makereservation(self):
+        self.reservation = Song(self.artistmenu.getentry(), self.albummenu.getentry(), self.trackmenu.getentry(), self.trackmenu.getpos())
+        self.settrackmarker()
+
+    def cancelreservation(self):
+        self.reservation = None
+
+    def settrackmarker(self):
+        if self.reservation:
+            song = self.reservation
+            for entry in self.trackmenu.entries:
+                entryismarked = song.artist.name == self.artistmenu.getentry().name and song.album.name == self.albummenu.getentry().name and song.track.name == entry.name
+                entry.marker = "XXX" if entryismarked else None
+        
     def mpdaddalbum(self, artist, album):
         self.currentartist = artist
         self.currentalbum = album
         self.mpd.clear()
-        songs = self.mpd.find("ALBUMARTIST", artist.name, "ALBUM", album.name)
-        for song in songs:
-            self.mpd.add(song.get('file'))
-
-    def togglemode(self):
-        if self.playbackmode == 0:
-            self.playbackmode = 1
-        elif self.playbackmode == 1:
-            self.playbackmode = 2
-        elif self.playbackmode == 2:
-            self.playbackmode = 0
+        self.mpd.findadd("ALBUMARTIST", artist.name, "ALBUM", album.name)
 
     def prevtrackalbum(self):
-        if self.playbackmode == 2 and self.currentstatus.get('song') == '0':
+        self.cancelreservation()
+        playtime = self.currentstatus.get('time').split(':')
+        timenow = int(playtime[0])
+        if timenow > 10:
+            self.mpd.seekcur(0)
+        elif self.playbackmode == 0 and self.currentstatus.get('song') == '0':
             self.mpdaddalbum(self.currentartist, self.currentalbum.prev)
             self.currentstatus = self.mpd.status()
             self.mpd.play(int(self.currentstatus.get('playlistlength', 1)) - 1)
@@ -135,21 +190,14 @@ class Starplay:
             self.mpd.previous()
 
     def nexttrackalbum(self):
-        if (int(self.currentstatus.get('song', 0)) == int(self.currentstatus.get('playlistlength', 1)) - 1): 
-            self.playbackfinished()
-        else:
-            self.mpd.next()
+        self.cancelreservation()
+        self.mpd.next()
 
     def playbackfinished(self):
         if self.playbackmode == 0: 
-            self.mpd.clear()
-            if self.activemenu == self.playback: self.selectartist(self.currentartist)
-        elif self.playbackmode == 1:
-            self.mpd.play(0)
-        elif self.playbackmode == 2:
             self.mpdaddalbum(self.currentartist, self.currentalbum.next)
-            self.mpd.play(0)
-
+        self.mpd.play(0)
+            
     def updatempd(self):
         newstatus = self.mpd.status()
         changed = (newstatus.get('time') != self.currentstatus.get('time'))
@@ -157,7 +205,11 @@ class Starplay:
 
         newsong = self.mpd.currentsong()
         if (newsong != self.currentsong):
-            if (not newsong and self.currentsong):
+            if (self.reservation):
+                self.playtrack(self.reservation)
+                self.currentstatus = self.mpd.status()
+                newsong = self.mpd.currentsong()
+            elif (not newsong and self.currentsong):
                 self.playbackfinished()
                 self.currentstatus = self.mpd.status()
                 newsong = self.mpd.currentsong()
@@ -173,120 +225,130 @@ class Starplay:
         self.activemenu.render()
         pygame.display.update()
 
+    def getactiveplaybackmenu(self):
+        return self.playback if self.playbackmode == 0 else self.randomplayback
+
+    def resetplayer(self):
+        self.mpd.update()
+        self.addartists()
+        self.setactivemenu(self.artistmenu)
+
     def main(self):
-            self.playbackmode = 2
-            self.activemenu = None
-            self.lastmenu = None
-            self.currentartist = None
-            self.currentalbum = None
-            self.currentstatus = {}
-            self.currentsong = {}
-            self.pygameinit() 
-            self.mpdinit()
+        self.randomentry = Entry("--- Random ---")
+        self.locklatched = 0
+        self.locked = 1
+        self.playbackmode = 0
+        self.activemenu = None
+        self.lastmenu = None
+        self.currentartist = None
+        self.currentalbum = None
+        self.currentstatus = {}
+        self.currentsong = {}
+        self.reservation = None
+        self.pygameinit() 
+        self.mpdinit()
+        self.sockserial = slirc.connect()
+        self.createartistmenu()
+        self.createalbummenu()
+        self.createtrackmenu()
+        self.createplayback()
+        self.createrandomplayback()
+        self.setactivemenu(self.artistmenu)
 
-            socklirc = slirc.connect()
+        self.updatempd()
 
-            self.createartistmenu()
-            self.createalbummenu()
-            self.createtrackmenu()
-            self.createplayback()  
+        randomstate = self.currentstatus.get('random')
+        if randomstate == "1":
+            self.playbackmode = 1
+
+        self.currentartist = Entry(self.currentsong.get('albumartist') or self.currentsong.get('artist'))
+        self.currentalbum = Entry(self.currentsong.get('album'))
+        self.addartists()
+        self.currentalbum = self.selectartist(self.currentartist)
+        
+        state = self.currentstatus.get('state') 
+        if state == 'stop': self.mpd.clear()
+        if state == 'play' or state == 'pause':
+            self.mpd.pause(0)
+            if self.playbackmode == 1:
+                self.selectrandomplayback()
+            else:
+                self.setactivemenu(self.playback)
+        else:
             self.setactivemenu(self.artistmenu)
 
-            self.updatempd()
-            self.currentartist = Entry(self.currentsong.get('albumartist') or self.currentsong.get('artist'))
-            self.currentalbum = Entry(self.currentsong.get('album'))
-            self.addartists()
-            self.currentalbum = self.selectartist(self.currentartist)
+        changed = True
+        running = True
+        timelast = time.time()
+        while running:
+            if self.locklatched == 1 and time.time() - timelast >= 1:
+                self.locked = 1
+                self.locklatched = 0
             
-            state = self.currentstatus.get('state') 
-            if state == 'stop': self.mpd.clear()
-            if state == 'play' or state == 'pause':
-                self.mpd.pause(0)
-                self.setactivemenu(self.playback)
-            else:
-                self.setactivemenu(self.artistmenu)
+            for key in slirc.nextcodes(self.sockserial):
+                if self.locklatched == 1:
+                   self.locked = 0 if key == 'e' or key == 'E' else 1
+                   self.locklatched = 0
 
-            changed = True
-            running = True
-            timelast = time.time()
-            while running:
-                for key in slirc.nextcodes(socklirc):
-                    if key == "BTN_PREV":
-                            self.prevtrackalbum()
-                    if key == "BTN_NEXT":
-                            self.nexttrackalbum()
-                    if key == "BTN_4":
-                            self.prevtrackalbum()
-                    if key == "BTN_6":
-                            self.nexttrackalbum()
+                if self.locked == 0:
+                    if key == 'l': self.prevtrackalbum()
+                    if key == 'r': self.nexttrackalbum()
+                    
+                    if key == 'L': self.resetplayer()
+                    if key == 'R': self.activemenu.keycontrol()
 
-                    if key == "BTN_1":
-                            self.mpd.update()
-                            self.addartists()
-                            self.setactivemenu(self.artistmenu)
+                    if key == 'b': self.activemenu.keybackspace()
+                    if key == 'e' or key == 'E':
+                        self.activemenu.keyenter()
+                        slirc.sendback(self.sockserial)
+                    if key == 'c': self.activemenu.keyenter()
 
-                    if key == "BTN_7":
-                            self.togglemode()
-
-                    if key == "BTN_0":
-                            self.activemenu.keybackspace()
-                    if key == "BTN_5":
-                            self.activemenu.keyenter()
-
-                    if key == "BTN_2":
-                            self.activemenu.keyup()
-                    if key == "BTN_8":
-                            self.activemenu.keydown()
+                    if key == 'u': self.activemenu.keyup()
+                    if key == 'd': self.activemenu.keydown()
                 
-                    if key == "BTN_9":
-                            self.activemenu.keypgdn()
-                    if key == "BTN_3":
-                            self.activemenu.keypgup()
+                    if key == 'D': self.activemenu.keypgdn()
+                    if key == 'U': self.activemenu.keypgup()
 
+                if key == 'x' and self.locked == 0: self.locklatched = 1
+                if key == 'C': self.locked = 0
+                if key == 'B': self.nexttrackalbum()
+
+                changed = True
+                timelast = time.time()     
+
+            for event in pygame.event.get():
+                if (event.type == pygame.QUIT):
+                    return
+                elif (event.type == pygame.KEYDOWN):
+                    if (event.key == pygame.K_ESCAPE):
+                        pygame.quit()
+                        return
+                    elif (event.key == pygame.K_DOWN): self.activemenu.keydown()
+                    elif (event.key == pygame.K_UP): self.activemenu.keyup()
+                    elif (event.key == pygame.K_LEFT): self.prevtrackalbum()
+                    elif (event.key == pygame.K_RIGHT): self.nexttrackalbum()
+                    elif (event.key == pygame.K_RETURN): self.activemenu.keyenter()
+                    elif (event.key == pygame.K_BACKSPACE): self.activemenu.keybackspace()
+                    elif (event.key == pygame.K_PAGEDOWN): self.activemenu.keypgdn()
+                    elif (event.key == pygame.K_PAGEUP): self.activemenu.keypgup()
+                    elif (event.key == pygame.K_c): self.locked = 0
+                    elif (event.key == pygame.K_u): self.resetplayer()
+                    elif (event.key == pygame.K_r): self.activemenu.keycontrol()
 
                     changed = True
                     timelast = time.time()     
 
-                for event in pygame.event.get():
-                    if (event.type == pygame.QUIT):
-                        return
-                    elif (event.type == pygame.KEYDOWN):
-                        if (event.key == pygame.K_ESCAPE):
-                            pygame.quit()
-                            return
-                        elif (event.key == pygame.K_DOWN):
-                            self.activemenu.keydown()
-                        elif (event.key == pygame.K_UP):
-                            self.activemenu.keyup()
-                        elif (event.key == pygame.K_LEFT):                        
-                            self.prevtrackalbum()
-                        elif (event.key == pygame.K_RIGHT):
-                            self.nexttrackalbum()
-                        elif (event.key == pygame.K_RETURN):
-                            self.activemenu.keyenter()
-                        elif (event.key == pygame.K_BACKSPACE):
-                            self.activemenu.keybackspace()
-                        elif (event.key == pygame.K_PAGEDOWN):
-                            self.activemenu.keypgdn()
-                        elif (event.key == pygame.K_PAGEUP):
-                            self.activemenu.keypgup()
-                        elif (event.key == pygame.K_m):
-                            self.togglemode()
-                        elif (event.key == pygame.K_u):
-                            self.mpd.update()
-                            self.addartists()
-                            self.setactivemenu(self.artistmenu)
+            if time.time() - timelast > 15 and self.currentstatus.get('state') == 'play' and self.activemenu != self.getactiveplaybackmenu():
+                self.addartists()
+                self.selectartist(self.currentartist)
+                self.setactivemenu(self.getactiveplaybackmenu())
+                changed = True
 
-                        changed = True
-                        timelast = time.time()     
-
-                if time.time() - timelast > 15 and self.currentstatus.get('state') == 'play' and self.activemenu != self.playback:
-                    self.addartists()
-                    self.selectartist(self.currentartist)
-                    self.setactivemenu(self.playback)
-                    changed = True
-
+            try:
                 changed |= self.updatempd()
                 if changed: self.rendermenu()
-                time.sleep(0.05)
-                
+            except Exception:
+                self.resetplayer()
+
+            time.sleep(0.05)
+            

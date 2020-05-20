@@ -1,4 +1,5 @@
 import pygame.freetype
+
 class BarFactory:
     @staticmethod
     def create_selectbar():
@@ -47,4 +48,3 @@ LINEPOS = 40
 SELECTBAR = BarFactory.create_selectbar()
 PBAR = BarFactory.create_pbar()
 PBARACTIVE = BarFactory.create_pbaractive()
-

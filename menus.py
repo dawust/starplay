@@ -4,25 +4,36 @@ import coverart
 from constants import *
 
 class Screen:
+    def __init__(self):
+        self.evententer = lambda: None
+        self.eventbackspace = lambda: None
+        self.eventcontrol = lambda: None
+        
     def keydown(self): pass
-    
+
     def keyup(self): pass
 
     def keypgdn(self): pass
 
     def keypgup(self): pass
 
-    def keyenter(self): 
+    def keyenter(self):
         self.evententer()
 
     def keybackspace(self):
         self.eventbackspace()
-   
+
+    def keycontrol(self):
+        self.eventcontrol()
+
     def setevententer(self, event):
         self.evententer = event
 
     def seteventbackspace(self, event):
         self.eventbackspace = event
+
+    def seteventcontrol(self, event):
+        self.eventcontrol = event
 
     def changedsong(self): pass
 
@@ -33,7 +44,12 @@ class Screen:
         pygame.draw.line(self.surface, GRAY, (LEFT, TOP + LINEPOS), (RIGHT, TOP + LINEPOS))
 
     def drawicons(self):
-        self.surface.fill(BLACK, (RIGHT-25, TOP - 24, RIGHT, TOP + 24))
+        self.surface.fill(BLACK, (RIGHT-75, TOP - 24, RIGHT, TOP + 24))
+        if (self.player.reservation is not None):
+            FONT.render_to(self.surface, (RIGHT-75, TOP+16), "\u2606", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 24)
+        if (self.player.locked == 1):
+            FONT.render_to(self.surface, (RIGHT-44, TOP+6), "\u2229", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 16)
+            FONT.render_to(self.surface, (RIGHT-46, TOP+16), "\u25A2", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 14)
         if (self.player.playbackmode == 1):
             FONT.render_to(self.surface, (RIGHT-25, TOP+16), "\u2192", WHITE, BLACK, pygame.freetype.STYLE_STRONG, 0, 24)
         elif (self.player.playbackmode == 2):
@@ -80,6 +96,7 @@ class Screen:
 
 class Playscreen(Screen):
     def __init__(self, surface, player):
+        super().__init__()
         self.surface = surface
         self.player = player
     
@@ -112,30 +129,26 @@ class Playscreen(Screen):
         self.surface.blit(image, (LEFT, TOP + LINEPOS + SPACER + y + 2), (0,y-1, x,y) )
 
     def render(self):
-        try:
-            self.drawicons()
-            playtime = self.player.currentstatus['time'].split(':')
-            timenow = int(playtime[0])
-            timetotal = int(playtime[-1])
-            timenowmin, timenowsec = divmod(timenow, 60)
-            timetotalmin, timetotalsec = divmod(timetotal, 60)
-         
-            barwidth = RIGHT - LEFT
-            barmid = LEFT + int(barwidth * (float(timenow)/timetotal))
-            barpos = TOP + LINEPOS + SPACER + IMAGESIZE + SPACER
-            for i in range(0, 16):
-                pygame.draw.line(self.surface, PBARACTIVE[i], (LEFT, barpos+i), (barmid, barpos+i))
-                pygame.draw.line(self.surface, PBAR[i], (barmid, barpos+i), (RIGHT, barpos+i))
-            self.surface.fill(BLACK, (LEFT, barpos + SPACER - 5, RIGHT, barpos + SPACER + 60))
-            FONT.render_to(self.surface, (LEFT, barpos + SPACER + 32), "%02d:%02d" % (timenowmin, timenowsec), WHITE, BLACK)
-            FONT.render_to(self.surface, (RIGHT - 120, barpos + SPACER + 32), "%02d:%02d" % (timetotalmin, timetotalsec), WHITE, BLACK)
-
-        except Exception as e:
-            print("Playback Exception")
-            print(self.player.currentstatus)
+        self.drawicons()
+        playtime = self.player.currentstatus['time'].split(':')
+        timenow = int(playtime[0])
+        timetotal = int(playtime[-1])
+        timenowmin, timenowsec = divmod(timenow, 60)
+        timetotalmin, timetotalsec = divmod(timetotal, 60)
+     
+        barwidth = RIGHT - LEFT
+        barmid = LEFT + int(barwidth * (float(timenow)/timetotal))
+        barpos = TOP + LINEPOS + SPACER + IMAGESIZE + SPACER
+        for i in range(0, 16):
+            pygame.draw.line(self.surface, PBARACTIVE[i], (LEFT, barpos+i), (barmid, barpos+i))
+            pygame.draw.line(self.surface, PBAR[i], (barmid, barpos+i), (RIGHT, barpos+i))
+        self.surface.fill(BLACK, (LEFT, barpos + SPACER - 5, RIGHT, barpos + SPACER + 60))
+        FONT.render_to(self.surface, (LEFT, barpos + SPACER + 32), "%02d:%02d" % (timenowmin, timenowsec), WHITE, BLACK)
+        FONT.render_to(self.surface, (RIGHT - 120, barpos + SPACER + 32), "%02d:%02d" % (timetotalmin, timetotalsec), WHITE, BLACK)
 
 class Menu(Screen):
     def __init__(self, surface, player, name=""):
+        super().__init__()
         self.surface = surface
         self.player = player
         self.name = name
@@ -220,6 +233,8 @@ class Menu(Screen):
         self.drawtitle(self.name)
         pos = (LEFT, TOP + LINEPOS + SPACER)
         for entry in self.entries[self.start:self.end]:
-           pos = self.drawentry(entry.name, pos, self.entries.index(entry) == self.sel)
+            title = entry.name if entry.marker is None else "\u2606 " + entry.name
+            pos = self.drawentry(title, pos, self.entries.index(entry) == self.sel)
         self.drawscrollbar()
+
 
